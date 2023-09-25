@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 from http import HTTPStatus
 from datetime import datetime
+from services.reports_service import RobotsReport
 
 
 def is_datetime_valid(value: str) -> bool:
@@ -20,15 +21,15 @@ def get_serial(model: str, version: str) -> str:
 
 @csrf_exempt
 def create(request):
-    if not request.POST:
+    if not request.method == 'POST':
         raise PermissionDenied
 
     if not all(key in request.POST for key in ('model', 'version', 'created')):
         return HttpResponse('Проверьте наличие обязательных полей в запросе!',
                             status=HTTPStatus.BAD_REQUEST)
 
-    model = request.POST['model'].strip()
-    version = request.POST['version'].strip()
+    model = request.POST['model'].strip().upper()
+    version = request.POST['version'].strip().upper()
     created = request.POST['created'].strip()
 
     if not is_datetime_valid(created):
@@ -58,3 +59,11 @@ def create(request):
     robot.save()
 
     return HttpResponse('Новый робот успешно зарегистрирован!')
+
+
+def report(request):
+    if not request.method == 'GET':
+        raise PermissionDenied
+
+    new_report = RobotsReport()
+    return new_report.execute()
