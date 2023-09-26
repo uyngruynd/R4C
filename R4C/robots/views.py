@@ -1,26 +1,35 @@
-from django.http import HttpResponse
-from robots.models import Robot
-from django.core.exceptions import PermissionDenied
-from django.views.decorators.csrf import csrf_exempt
-from http import HTTPStatus
+import re
 from datetime import datetime
-from services.reports_service import RobotsReport
+from http import HTTPStatus
+
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+
+from robots.models import Robot
+from services.reports_service import RobotsReport, get_date, get_serial
 
 
-def is_datetime_valid(value: str) -> bool:
+def is_datetime_valid(text: str) -> bool:
+    """Текстовое представление даты должно соответствовать формату datetime."""
     try:
-        datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        datetime.strptime(text, '%Y-%m-%d %H:%M:%S')
         return True
     except:
         return False
 
 
-def get_serial(model: str, version: str) -> str:
-    return f'{model}-{version}'
+def is_name_valid(text: str) -> bool:
+    """
+    Часть имени должна состоять из двух символов: заглавная буква и цифра.
+    """
+    pattern = r'^[A-Z]\d$'
+    return bool(re.fullmatch(pattern, text))
 
 
 @csrf_exempt
 def create(request):
+    """Валидация данных запроса и запись нового робота в базу"""
     if not request.method == 'POST':
         raise PermissionDenied
 
@@ -35,6 +44,16 @@ def create(request):
     if not is_datetime_valid(created):
         return HttpResponse('Неверный формат даты!',
                             status=HTTPStatus.BAD_REQUEST)
+
+    if not is_name_valid(model):
+        return HttpResponse('Неверный формат модели!',
+                            status=HTTPStatus.BAD_REQUEST)
+
+    if not is_name_valid(version):
+        return HttpResponse('Неверный формат версии!',
+                            status=HTTPStatus.BAD_REQUEST)
+
+    created = get_date(created)
 
     existing_models = Robot.objects.values_list('model', flat=True)
 
@@ -62,6 +81,7 @@ def create(request):
 
 
 def report(request):
+    """Вызов сервиса по формированию отчета по выпущенной продукции."""
     if not request.method == 'GET':
         raise PermissionDenied
 
