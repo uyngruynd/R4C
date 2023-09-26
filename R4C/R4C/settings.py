@@ -12,6 +12,10 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -123,4 +127,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Переопределил модель пользователя для возможности дальнейшей модификации
 AUTH_USER_MODEL = 'users.User'
+
+# Настройки для почтового клиента
+RECIPIENTS_EMAIL = [os.getenv('EMAIL', default='r4c@fake.com')]
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL', default='r4c@fake.com')
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

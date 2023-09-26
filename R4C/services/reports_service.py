@@ -1,30 +1,37 @@
-from openpyxl import Workbook
-from django.http import HttpResponse
-from datetime import datetime, timedelta
 import io
-from robots.models import Robot
+from datetime import datetime, timedelta
+
 from django.db.models import Count
+from django.http import HttpResponse
 from django.utils import timezone
+from openpyxl import Workbook
+
+from robots.models import Robot
+
+
+def get_date(text: str) -> datetime:
+    date = datetime.strptime(text, '%Y-%m-%d %H:%M:%S')
+    tz = timezone.get_current_timezone()
+    tz_datetime = timezone.make_aware(date, tz, True)
+    return tz_datetime
+
+
+def get_serial(model, version):
+    return f'{model}-{version}'
 
 
 class RobotsReport:
 
     def __init__(self, start_date=None, end_date=None):
         if end_date:
-            self.end_date = self._get_date(end_date)
+            self.end_date = get_date(end_date)
         else:
             self.end_date = timezone.now()
 
         if start_date:
-            self.start_date = self._get_date(start_date)
+            self.start_date = get_date(start_date)
         else:
             self.start_date = self.end_date - timedelta(days=7)
-
-    # noinspection PyMethodMayBeStatic
-    def _get_date(self, date):
-        tz = timezone.get_current_timezone()
-        tz_datetime = timezone.make_aware(date, tz, True)
-        return tz_datetime
 
     # noinspection PyMethodMayBeStatic
     def _add_row(self, worksheet, row_idx, data):
@@ -54,6 +61,9 @@ class RobotsReport:
         return buffer.getvalue()
 
     def execute(self):
+        """
+        Возвращаю двоичные данные, содержащие сформированный отчет директору.
+        """
         filename = f'RobotsReport-{datetime.now().strftime("%Y-%m-%d")}'
 
         response = HttpResponse(content=self._get_report_stream(),
